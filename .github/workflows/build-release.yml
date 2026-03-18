@@ -62,6 +62,23 @@ jobs:
           command: build
           target: ${{ matrix.target }}
           args: ${{ steps.profile.outputs.flag }}
+        env:
+          LLVM: 1
+          CC: clang
+          CXX: clang++
+          LD: ld.lld
+          AR: llvm-ar
+          NM: llvm-nm
+          OBJCOPY: llvm-objcopy
+          OBJDUMP: llvm-objdump
+          READELF: llvm-readelf
+          OBJSIZE: llvm-size
+          STRIP: llvm-strip
+          HOSTCC: clang
+          HOSTCXX: clang++
+          HOSTLD: ld.lld
+          HOSTLDFLAGS: "-fuse-ld: lld"
+          HOSTAR: llvm-ar
 
       - name: Prepare Artifacts
         run: |
