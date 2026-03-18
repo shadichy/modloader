@@ -62,8 +62,6 @@ jobs:
           command: build
           target: ${{ matrix.target }}
           args: ${{ steps.profile.outputs.flag }}
-        env:
-          CROSS_ANDROID_NDK_TOOLCHAIN_VERSION: clang
 
       - name: Prepare Artifacts
         run: |
