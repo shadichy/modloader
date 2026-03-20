@@ -38,10 +38,10 @@ pub unsafe extern "C" fn main(argc: i32, argv: *const *const c_char, _envp: *con
         return 1;
     }
 
-    // Check if we have exactly 2 arguments (program name + path)
-    if argc != 2 {
+    // Check if we have at least 2 arguments (program name + path)
+    if argc < 2 {
         eprintln!("{}: {}: {}", _p, _E, "Invalid arguments.");
-        eprintln!("{}: {}: '{} {}'", _p, "Usage", _p_abs, "path/to/module.ko");
+        eprintln!("{}: {}: '{} {}'", _p, "Usage", _p_abs, "path/to/module.ko [params]");
         return 2;
     }
 
@@ -62,8 +62,18 @@ pub unsafe extern "C" fn main(argc: i32, argv: *const *const c_char, _envp: *con
         path_str
     };
 
+    // Concat all arguments from argv[2] into params
+    let mut params = String::new();
+    for i in 2..argc {
+        let arg = unsafe { CStr::from_ptr(*(argv.add(i as usize))) }.to_str().unwrap_or("");
+        if !params.is_empty() {
+            params.push(' ');
+        }
+        params.push_str(arg);
+    }
+
     // Call loader and get error code
-    let error_code = loader::load_module(path);
+    let error_code = loader::load_module(path, Some(&params));
 
     // If successful, return 0
     if error_code == ErrorCode::Success {

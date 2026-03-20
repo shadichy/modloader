@@ -61,7 +61,7 @@ fn parse_kallsyms() -> Result<HashMap<String, u64>> {
     Ok(allsyms)
 }
 
-pub fn load_module(path: &str) -> ErrorCode {
+pub fn load_module(path: &str, params: Option<&str>) -> ErrorCode {
     let mut buffer = match fs::read(path) {
         Ok(b) => b,
         Err(_) => return ErrorCode::ReadFileFailed,
@@ -106,7 +106,9 @@ pub fn load_module(path: &str) -> ErrorCode {
             return ErrorCode::AppendElfFailed;
         }
     }
-    match rustix::system::init_module(&buffer, rustix::cstr!("")) {
+
+    let params_c = std::ffi::CString::new(params.unwrap_or("")).unwrap_or_default();
+    match rustix::system::init_module(&buffer, &params_c) {
         Ok(()) => ErrorCode::Success,
         Err(_) => ErrorCode::InitModuleFailed,
     }
