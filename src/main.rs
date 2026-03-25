@@ -1,22 +1,24 @@
 #![no_main]
 
 mod loader;
+#[cfg(feature = "kernelsu")]
 mod checker;
 
 use std::ffi::{CStr, c_char};
 use rustix::process::getuid;
 use loader::ErrorCode;
 
+#[cfg(feature = "kernelsu")]
 use crate::checker::has_kernelsu;
 
 // Error code to message mapping
 const ERROR_MESSAGES: &[(&str, ErrorCode)] = &[
-    ("Invalid process.", ErrorCode::InvalidProcess),
-    ("Could not read file.", ErrorCode::ReadFileFailed),
-    ("Could not read ELF header of file.", ErrorCode::ReadElfFailed),
-    ("Could not parse kallsyms.", ErrorCode::ParseKallsymsFailed),
-    ("Could not append modifications to ELF.", ErrorCode::AppendElfFailed),
-    ("Module init failed.", ErrorCode::InitModuleFailed),
+    ("Invalid process", ErrorCode::InvalidProcess),
+    ("Could not read file", ErrorCode::ReadFileFailed),
+    ("Could not read ELF header of file", ErrorCode::ReadElfFailed),
+    ("Could not parse kallsyms", ErrorCode::ParseKallsymsFailed),
+    ("Could not append modifications to ELF", ErrorCode::AppendElfFailed),
+    ("Module init failed", ErrorCode::InitModuleFailed),
 ];
 
 /// # Safety
@@ -72,25 +74,30 @@ pub unsafe extern "C" fn main(argc: i32, argv: *const *const c_char, _envp: *con
         params.push_str(arg);
     }
 
-    // Call loader and get error code
-    let error_code = loader::load_module(path, Some(&params));
+    // Call loader and get result
+    let result = loader::load_module(path, Some(&params));
 
     // If successful, return 0
-    if error_code == ErrorCode::Success {
-        let version = has_kernelsu();
-        if version == 0 {
-            eprintln!("{}: {}: {}", _p, _E, "Invalid KernelSU version.");
-            return 3;
-        }
+    if result.is_ok() {
+        #[cfg(feature = "kernelsu")]
+        {
+            let version = has_kernelsu();
+            if version == 0 {
+                eprintln!("{}: {}: {}", _p, _E, "Invalid KernelSU version.");
+                return 3;
+            }
 
-        eprintln!("{}: {}: {}.", _p, "KernelSU Version", version);
+            eprintln!("{}: {}: {}.", _p, "KernelSU Version", version);
+        }
         return 0;
     }
+
+    let (error_code, detail) = result.unwrap_err();
 
     // Map error code to message and print
     for (message, code) in ERROR_MESSAGES {
         if *code == error_code {
-            eprintln!("{}: {}: {}: {}", _p, _E, path_str, message);
+            eprintln!("{}: {}: {}: {}: {}", _p, _E, path_str, message, detail);
             break;
         }
     }
