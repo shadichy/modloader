@@ -11,11 +11,10 @@ Standard kernel module loading (`insmod` and `modprobe`) relies on the kernel's 
 
 `modloader` bypasses these restrictions by performing the linking process in user-space:
 
-1.  **Permission Escalation**: Temporarily sets `/proc/sys/kernel/kptr_restrict` to `1` (if run as root) to ensure kernel addresses are visible.
+1.  **Permission Escalation**: Temporarily disables KPTR RESTRICT by setting `/proc/sys/kernel/kptr_restrict` to `1` (if run as root) to ensure kernel addresses are visible.
 2.  **Symbol Resolution**: Parses `/proc/kallsyms` using a memory-efficient streaming reader to build a map of the running kernel's symbols.
 3.  **ELF Patching**: Reads the target `.ko` file, identifies `SHN_UNDEF` (undefined) symbols, and patches their values and section indices (`SHN_ABS`) directly in the memory buffer using the addresses found in `kallsyms`.
 4.  **Loading**: Executes the `init_module` system call with the patched buffer and any provided module parameters.
-5.  **Validation (Optional)**: If built with the `kernelsu` feature, it performs a post-load check using the `reboot` and `prctl` syscalls to verify and report the KernelSU version.
 
 ## System Requirements
 
@@ -31,7 +30,7 @@ For `modloader` to function correctly, the target Linux kernel must be compiled 
 `modloader` is specifically optimized for **KernelSU LKM Mode**. When KernelSU is compiled as a module (`CONFIG_KSU=m`), it often needs to be loaded into kernels that do not export the necessary symbols or enforce strict signature checks (SELinux policies).
 
 Key benefits for KernelSU users:
-- **Symbol Patching**: KernelSU requires access to internal kernel symbols (like `sys_read` or `vfs_write`) that are often not exported for module use. `modloader` patches these addresses at runtime.
+- **Symbol Patching**: KernelSU requires access to internal kernel symbols (like `tasklist_lock` or `set_fs_pwd`) that are often not exported for module use. `modloader` patches these addresses at runtime.
 - **GKI Compatibility**: Allows running KernelSU on Generic Kernel Images (GKI) or stock kernels without needing a complete kernel rebuild.
 - **Stability**: Ensures the module is correctly linked against the running kernel's exact memory layout, preventing "Exec format error" or "Required key not available" failures.
 
@@ -59,7 +58,7 @@ sudo dpkg -i modloader.deb
 
 ## Arch Linux
 
-`modloader` is available in the Arch User Repository (AUR). You can use an AUR helper like `paru` or `yay`, or build manually.
+`modloader` is available in the [Arch User Repository (AUR)](https://aur.archlinux.org/packages/modloader). You can use an AUR helper like `paru` or `yay`, or build manually.
 
 **Using an AUR helper:**
 ```bash
@@ -83,18 +82,18 @@ Download the appropriate binary for your architecture and C library from the [Gi
 
 | Architecture | libc | Target Triple |
 | :--- | :--- | :--- |
-| **x86_64** | musl (static) | `x86_64-unknown-linux-musl` |
-| **aarch64** | musl (static) | `aarch64-unknown-linux-musl` |
+| **x86_64** | musl | `x86_64-unknown-linux-musl` |
+| **aarch64** | musl | `aarch64-unknown-linux-musl` |
 | **x86_64** | glibc | `x86_64-unknown-linux-gnu` |
 | **aarch64** | glibc | `aarch64-unknown-linux-gnu` |
 | **aarch64** | bionic (Android) | `aarch64-linux-android` |
 | **x86_64** | bionic (Android) | `x86_64-linux-android` |
 
 ```bash
-# Example for x86_64 static binary
-wget https://github.com/shadichy/modloader/releases/latest/download/modloader-x86_64-musl
-chmod +x modloader-x86_64-musl
-sudo ./modloader-x86_64-musl /path/to/module.ko [params]
+# Example for glibc binary
+sudo wget -O /usr/local/sbin/modloader https://github.com/shadichy/modloader/releases/latest/download/modloader-$(uname -m)-glibc
+sudo chmod +x /usr/local/sbin/modloader
+export PATH=$PATH:/usr/local/sbin
 ```
 
 # Usage
@@ -150,12 +149,10 @@ Binaries will be located at `target/<target>/debug/modloader`.
 
 
 # Technical Notes
-- **Static Linking**: The `musl` targets are fully static, making them ideal for recovery environments or minimal Android systems.
-- **Entry Point**: This project uses `#![no_main]` and a C-style `main` function to avoid overhead and issues related to standard Rust runtime initialization on certain systems.
 
 ## Error Codes
 
-`modloader` uses specific exit codes to indicate different failure states. Exit codes for module loading errors are bit-shifted (`code << 2`).
+`modloader` uses specific exit codes to indicate different failure states.
 
 | Exit Code | Meaning | Description |
 | :--- | :--- | :--- |
