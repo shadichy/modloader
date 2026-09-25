@@ -3,6 +3,9 @@ name = "modloader"
 version = "2.0.0"
 edition = "2024"
 
+[patch.crates-io]
+libc = { git = "https://github.com/rust-lang/libc", rev = "1a661633f11a261ff9c00b40875ef72f1cbec818" }
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -13,11 +16,12 @@ anyhow = "1.0.102"
 
 # If you want to use the following dependencies, please use aarch64-unknown-linux-musl & x86_64-unknown-linux-musl to compile statically
 # rustix = { git = "https://github.com/bytecodealliance/rustix", rev = "7b44528", features = ["mount", "fs", "runtime", "system", "process"] }
-rustix = { git = "https://github.com/Kernel-SU/rustix.git", rev = "4a53fbc", features = ["mount", "fs", "runtime", "system", "process"] }
+rustix = { git = "https://github.com/KernelSU2/rustix.git", rev = "4a53fbc", features = ["mount", "fs", "runtime", "system", "process"] }
 
 syscalls = { version = "0.8.1", default-features = false, features = [
     "aarch64",
     "x86_64",
+    "riscv64",
 ] }
 
 [features]
